@@ -132,7 +132,7 @@ jobs:
                   im = canvas
               for q in (90, 80, 70, 60, 50, 40, 30):
                   b = io.BytesIO()
-                  im.save(b, "WEBP", quality=q, method=6)
+                  im.save(b, "WEBP", quality=q, method=4)
                   if b.tell() < 100 * 1024:
                       return b.getvalue()
               return None
@@ -258,6 +258,7 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/my-stickers.apk"
 
       - name: Keep the same signing key for next time
+        continue-on-error: true
         run: |
           if [ ! -f keystore/debug.keystore ]; then
             mkdir -p keystore
@@ -266,6 +267,7 @@ jobs:
             git config user.email "github-actions@users.noreply.github.com"
             git add keystore/debug.keystore
             git commit -m "save signing key [skip ci]"
+            git pull --rebase
             git push
           fi
 
