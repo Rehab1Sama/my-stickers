@@ -33,6 +33,7 @@ jobs:
           cat > fetch_packs.py <<'PY'
           import json, os, re, sys, io, time, shutil
           import urllib.request
+          from concurrent.futures import ThreadPoolExecutor
           from PIL import Image
 
           ASSETS = sys.argv[2] if len(sys.argv) > 2 else "assets_out"
@@ -171,16 +172,18 @@ jobs:
                   except Exception as e:
                       print("  error:", e); failed.append(code); continue
                   good_static, good_anim = [], []
-                  for u in urls:
+                  def dl(u):
                       try:
-                          raw = None
-                          if u.lower().endswith(".png"):
-                              try:
-                                  raw = get(u[:-4] + ".webp", tries=1)
-                              except Exception:
-                                  raw = None
-                          if raw is None:
-                              raw = get(u)
+                          return get(u)
+                      except Exception as e:
+                          print("  download failed:", e)
+                          return None
+                  with ThreadPoolExecutor(8) as ex:
+                      raws = list(ex.map(dl, urls))
+                  for raw in raws:
+                      if raw is None:
+                          continue
+                      try:
                           im, anim, durs = info(raw)
                       except Exception as e:
                           print("  skip sticker:", e); continue
