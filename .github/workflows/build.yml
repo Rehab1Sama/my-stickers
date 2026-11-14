@@ -41,15 +41,15 @@ jobs:
           EMOJI = ["🌸"]
 
 
-          def get(url, headers=None, tries=3):
+          def get(url, headers=None, tries=2):
               for i in range(tries):
                   try:
                       req = urllib.request.Request(url, headers=headers or {"User-Agent": UA})
-                      with urllib.request.urlopen(req, timeout=40) as r:
+                      with urllib.request.urlopen(req, timeout=20) as r:
                           return r.read()
                   except Exception as e:
                       last = e
-                      time.sleep(2)
+                      time.sleep(1)
               raise last
 
 
@@ -75,10 +75,18 @@ jobs:
                   name = meta.get("name")
                   author = meta.get("authorName") or (meta.get("user") or {}).get("userName")
                   prefix = meta.get("resourceUrlPrefix") or ""
-                  items = meta.get("stickers") or meta.get("resourceFiles") or []
+                  items = meta.get("stickers") or meta.get("resourceFileNames") or meta.get("resourceFiles") or []
+                  tray = meta.get("trayResourceUrl") or ""
+                  for it in items:
+                      if isinstance(it, dict):
+                          tray = tray or (it.get("stickerPack") or {}).get("trayResourceUrl") or ""
+                          if not name:
+                              name = (it.get("stickerPack") or {}).get("name")
+                  if not prefix and tray:
+                      prefix = tray.rsplit("/", 1)[0] + "/"
                   for it in items:
                       fn = it.get("fileName") if isinstance(it, dict) else it
-                      if fn:
+                      if fn and (fn.startswith("http") or prefix):
                           urls.append(fn if fn.startswith("http") else prefix + fn)
                   if not urls:
                       print("  meta keys:", list(meta.keys()))
@@ -165,7 +173,14 @@ jobs:
                   good_static, good_anim = [], []
                   for u in urls:
                       try:
-                          raw = get(u)
+                          raw = None
+                          if u.lower().endswith(".png"):
+                              try:
+                                  raw = get(u[:-4] + ".webp", tries=1)
+                              except Exception:
+                                  raw = None
+                          if raw is None:
+                              raw = get(u)
                           im, anim, durs = info(raw)
                       except Exception as e:
                           print("  skip sticker:", e); continue
@@ -221,7 +236,7 @@ jobs:
 
           main()
           PY
-          python fetch_packs.py links.txt wa/Android/app/src/main/assets
+          python -u fetch_packs.py links.txt wa/Android/app/src/main/assets
 
       - name: Name the app
         working-directory: wa/Android
