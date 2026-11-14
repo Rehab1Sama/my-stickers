@@ -1,0 +1,18 @@
+name: probe
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/probe.yml
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          UA="androidapp.stickerly/2.17.0 (M2012K11AG; U; Android 29; ar; sa;)"
+          for v in v4 v3.2 v3.1; do
+            echo "=== $v"
+            curl -sS -m 20 -w "\nHTTP %{http_code}\n" -A "$UA" "https://api.sticker.ly/$v/stickerPack/IBIIBX?needRelation=true" | head -c 2500; echo
+          done
+          echo "=== page"
+          curl -sSL -m 20 -A "Mozilla/5.0" -w "\nHTTP %{http_code}\n" https://sticker.ly/s/IBIIBX | grep -oE 'https?://[^"]+\.(webp|png)' | head -20
