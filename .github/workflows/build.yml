@@ -245,31 +245,21 @@ jobs:
         working-directory: wa/Android
         run: |
           sed -i 's/applicationId "com.example.samplestickerapp"/applicationId "com.rehab.mystickers"/' app/build.gradle
+          sed -i 's/compileSdkVersion 30/compileSdkVersion 34/; s/targetSdkVersion 30/targetSdkVersion 34/; s/minSdkVersion 15/minSdkVersion 21/' app/build.gradle
+          sed -i 's/minifyEnabled true/minifyEnabled false/; s/shrinkResources true/shrinkResources false/' app/build.gradle
+          sed -i 's|<activity android:name=".EntryActivity">|<activity android:name=".EntryActivity" android:exported="true">|' app/src/main/AndroidManifest.xml
           sed -i 's|<string name="app_name">.*</string>|<string name="app_name">ملصقاتي</string>|' app/src/main/res/values/strings.xml
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          mkdir -p ~/.android
-          if [ -f "$GITHUB_WORKSPACE/keystore/debug.keystore" ]; then cp "$GITHUB_WORKSPACE/keystore/debug.keystore" ~/.android/debug.keystore; fi
 
       - name: Build the app
         working-directory: wa/Android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/my-stickers.apk"
-
-      - name: Keep the same signing key for next time
-        continue-on-error: true
-        run: |
-          if [ ! -f keystore/debug.keystore ]; then
-            mkdir -p keystore
-            cp ~/.android/debug.keystore keystore/debug.keystore
-            git config user.name "github-actions"
-            git config user.email "github-actions@users.noreply.github.com"
-            git add keystore/debug.keystore
-            git commit -m "save signing key [skip ci]"
-            git pull --rebase
-            git push
-          fi
+          ./gradlew assembleRelease --no-daemon
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          $BT/apksigner sign --ks "$GITHUB_WORKSPACE/keystore/release.jks" --ks-pass pass:mystickers123 --ks-key-alias stickers --key-pass pass:mystickers123 --out "$GITHUB_WORKSPACE/my-stickers.apk" aligned.apk
+          $BT/apksigner verify --print-certs "$GITHUB_WORKSPACE/my-stickers.apk"
 
       - name: Publish the app
         uses: softprops/action-gh-release@v2
