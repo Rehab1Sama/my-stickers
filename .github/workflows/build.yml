@@ -222,7 +222,7 @@ jobs:
                       if ci: pname = (pname + " (%d)" % (ci + 1))[:128]
                       packs.append({
                           "identifier": ident, "name": pname,
-                          "publisher": (author or "sticker.ly")[:120],
+                          "publisher": "رِحاب",
                           "tray_image_file": "tray.png", "image_data_version": "1",
                           "avoid_cache": False, "publisher_email": "", "publisher_website": "",
                           "privacy_policy_website": "", "license_agreement_website": "",
@@ -250,6 +250,12 @@ jobs:
           sed -i 's|<activity android:name=".EntryActivity">|<activity android:name=".EntryActivity" android:exported="true">|' app/src/main/AndroidManifest.xml
           sed -i 's|<string name="app_name">.*</string>|<string name="app_name">ملصقاتي</string>|' app/src/main/res/values/strings.xml
           echo "sdk.dir=$ANDROID_HOME" > local.properties
+          rm -rf app/src/main/res/mipmap-anydpi-v26
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            rm -f app/src/main/res/mipmap-$d/ic_launcher*.png app/src/main/res/mipmap-$d/ic_launcher*.webp
+            cp "$GITHUB_WORKSPACE/icon/ic_launcher_$d.png" app/src/main/res/mipmap-$d/ic_launcher.png
+            cp "$GITHUB_WORKSPACE/icon/ic_launcher_round_$d.png" app/src/main/res/mipmap-$d/ic_launcher_round.png
+          done
 
       - name: Build the app
         working-directory: wa/Android
